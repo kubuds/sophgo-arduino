@@ -107,7 +107,7 @@ recipe.size.regex.data=\s*[0-9]+\s+[0-9]+\s+[0-9]+\s+([0-9]+).*
 ## burntool_py
 
 tools.burntool_py.path={runtime.tools.burntool_py.path}
-tools.burntool_py.cmd=burntool
+tools.burntool_py.cmd=burntool.py
 tools.burntool_py.cmd.linux=burntool.py
 tools.burntool_py.cmd.windows=burntool.py
 
