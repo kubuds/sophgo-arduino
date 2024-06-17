@@ -4,6 +4,8 @@
     "repoName": "duo-arduino",
     "downloadUrlFmt": "https://github.com/@REPOOWNER@/@REPONAME@/releases/download/@VERSION@/@ARCHIVENAME@",
     "indexJsonFileName": "package_sg200x_index.json",
+    "milkvDuoIndexJsonFileReleaseTag": "config",
+    "milkvDuoIndexJsonFileUrl": "https://github.com/milkv-duo/duo-arduino/releases/download/config/package_sg200x_index.json",
     "versionPrefix": "v"
   },
   "ignoredVersions": [],

@@ -1,0 +1,145 @@
+name: arduino duo release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+      - 'V*.*.*'
+    paths-ignore:
+      - '.github/workflows/docs.yml'
+      - 'docs/**'
+  workflow_dispatch:
+    inputs:
+      force-update:
+        description: (DANGER!!) force updating the package_sg200x_index.json file
+        required: false
+        type: string
+  
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: checkout current triggered tag
+      if: github.event_name == 'push'
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: checkout input tag
+      if: github.event_name == 'workflow_dispatch'
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.tag }}
+        fetch-depth: 0
+    - name: setup python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Install Dependencies
+      run: pip3 install sphinx sphinx-copybutton sphinx_multiversion sphinx_rtd_theme
+
+    - name: Build
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      id: package-build
+      run: |
+        set -e
+        echo $PWD
+        echo $GITHUB_WORKSPACE
+        cd ./package/
+        ./release.sh
+        . $GITHUB_ENV
+        if ! [[ ${INDEX_JSON_STATUS} =~ ^UPDATED_JSON:1 ]]; then
+          echo "The arduino-sophgo package no updates!" >&2
+          echo "Something wroing with the version number?" >&2
+          if [[ "${{ inputs.force-update }}" =~ ^(1|(Y|y)((E|e)(S|s))?|(T|t)rue)$ ]]; then
+            echo "force updating ..." >&2
+          else
+            exit 1
+          fi
+        fi
+        mv $GITHUB_WORKSPACE/../arduino-sophgo.zip $GITHUB_WORKSPACE/
+        mv $GITHUB_WORKSPACE/../$INDEX_JSON_FILE_NAME $GITHUB_WORKSPACE/
+        mv $GITHUB_WORKSPACE/../burntool.tar.gz $GITHUB_WORKSPACE/
+        mv $GITHUB_WORKSPACE/../burntool.zip $GITHUB_WORKSPACE/
+
+    - name: Build Doc
+      run: |
+        cd $GITHUB_WORKSPACE/docs
+        make html
+        tar -zcvf docs_html.tar.gz ./build/
+        mv docs_html.tar.gz $GITHUB_WORKSPACE/
+
+    - name: Create Release and Upload Release Asset
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/')
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        name: Release  ${{ github.ref_name }}
+        body: TODO New Release.
+        draft: false
+        prerelease: false
+        files: |
+          arduino-sophgo.zip
+          ${{ steps.package-build.outputs.index_json_file_name }}
+          burntool.tar.gz
+          burntool.zip
+          docs_html.tar.gz
+    - name: Install GitHub CLI for updating package index file within the specific release
+      run: sudo apt-get install -y gh
+    - name: Authenticate GitHub CLI
+      run: gh auth login --with-token <<< "${{ secrets.GITHUB_TOKEN }}"
+    - name: Get release by tag
+      id: get_release
+      env:
+        TAG_NAME: ${{ steps.package-build.outputs.index_json_file_release_tag }}
+      run: |
+        RELEASE_ID=$(gh api repos/$GITHUB_REPOSITORY/releases/tags/$TAG_NAME --jq '.id')
+        echo "id=$RELEASE_ID" >>$GITHUB_OUTPUT
+    - name: Upload new asset to release
+      env:
+        FILE_PATH: ${{ steps.package-build.outputs.index_json_file_name }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        set -e
+        _do() {
+          echo ">>>" "$@" >&2
+          "$@"
+        }
+        RELEASE_ID=${{ steps.get_release.outputs.id }}
+        FILE_NAME=$(basename $FILE_PATH)
+        if ! [[ -f "$FILE_PATH" ]]; then
+          echo "file '$FILE_PATH' not exist" >&2
+          exit 1
+        fi
+        ASSET_ID=$(_do gh api repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets --jq ".[] | select(.name == \"$FILE_NAME\") | .id")
+        if [[ -n "$ASSET_ID" ]]; then
+          # delete the old asset
+          gh api \
+            --method DELETE \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            /repos/$GITHUB_REPOSITORY/releases/assets/$ASSET_ID
+        fi
+        # upload the new asset
+        # gh api not work, weird
+        curl -L -X POST \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer $GITHUB_TOKEN" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          -H "Content-Type: application/octet-stream" \
+          "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=$FILE_NAME" \
+          --data-binary "@$FILE_PATH"
+    - name: Check release assets
+      run: |
+        RELEASE_ID=${{ steps.get_release.outputs.id }}
+        gh api repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets --jq '.[].name'
