@@ -33,6 +33,21 @@ fatal() {
 	exit "$ret"
 }
 
+gh_latest_two_tag() {
+	local owner=$1 name=$2
+	local res query query_f
+	local -a tags
+	printf -v query \
+		'{ "query": "query { repository(owner: \\\"%s\\\", name: \\\"%s\\\") { refs(refPrefix: \\\"refs/tags/\\\",orderBy: { field: TAG_COMMIT_DATE, direction: DESC }, first: 2) { edges { node { name } } } } }" }' \
+		"${owner}" "${name}"
+	res=$(curl -s -X POST \
+		-H "Accept: application/json" \
+		-H "Authorization: Bearer ${GITHUB_TOKEN}" \
+		-d "${query}" https://api.github.com/graphql ) || return $?
+	tags=$(_do echo "$res" | _do jq --raw-output '.data.repository.refs.edges[].node.name')
+	echo -n "${tags[@]}"
+}
+
 CURDIR="$(dirname "$(realpath "$0")")"
 REPODIR=$(realpath "${CURDIR}/../")
 : "${WORKDIR:="$(realpath "${REPODIR}/../")"}"
@@ -54,8 +69,6 @@ jq_value() {
 
 ARDUINO_VERSION="$(jq_value '.current .version')"
 INDEX_JSON_FILE_NAME="$(jq_value '.basicInfo .indexJsonFileName')"
-MILKV_DUO_INDEX_JSON_FILE_URL="$(jq_value '.basicInfo .milkvDuoIndexJsonFileUrl')"
-MILKV_DUO_INDEX_JSON_FILE_RELEASE_TAG="$(jq_value '.basicInfo .milkvDuoIndexJsonFileReleaseTag')"
 REPO_OWNER="$(jq_value '.basicInfo .repoOwner')"
 REPO_NAME="$(jq_value '.basicInfo .repoName')"
 
@@ -166,6 +179,20 @@ create_package
 INDEX_JSON_FILE="${WORKDIR}/${INDEX_JSON_FILE_NAME}"
 INDEX_JSON_FILE_TMPL="${CURDIR}/${INDEX_JSON_FILE_NAME%.json}.template.json"
 
+if [[ -z $GENERATE_FRESH_INDEX_JSON_FILE ]]; then
+	THE_LATEST_TWO_TAGS=( $(gh_latest_two_tag "$REPO_OWNER" "$REPO_NAME") )
+	for __latest_tag in "${THE_LATEST_TWO_TAGS[@]}"; do
+		INDEX_JSON_FILE_URL=$(
+			curl -H "Authorization: Token ${GITHUB_TOKEN}" \
+				"https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/tags/${__latest_tag}" \
+				| jq --raw-output ".assets[] | select(.name == \"${INDEX_JSON_FILE_NAME}\") | .url"
+		) && break || true
+	done
+fi
+if [[ $INDEX_JSON_FILE_URL == "" ]]; then
+	GENERATE_FRESH_INDEX_JSON_FILE=1
+fi
+
 DOWNLOAD_URL_FMT="$(jq_value '.basicInfo .downloadUrlFmt')"
 VERSION_PREFIX="$(jq_value '.basicInfo .versionPrefix')"
 TOOL_DEPS_JSON=$(jq -c '.current .toolsDependencies | map({packager, name, version, source})' <<<"$CONFIG_JSON_DATA")
@@ -213,7 +240,9 @@ generate_tools_item_json() {
 
 if [[ -z $GENERATE_FRESH_INDEX_JSON_FILE ]]; then
 	get_the_latest_index_json_file() {
-		_do curl -Lfo "$INDEX_JSON_FILE" "${MILKV_DUO_INDEX_JSON_FILE_URL}" || return 1
+		_do curl -H "Authorization: Token ${GITHUB_TOKEN}" \
+			-H "Accept: application/octet-stream" \
+			-Lfo "$INDEX_JSON_FILE" "$INDEX_JSON_FILE_URL" || return 1
 	}
 	get_the_latest_index_json_file || \
 		GENERATE_FRESH_INDEX_JSON_FILE=1
@@ -239,6 +268,12 @@ if [[ -n $GENERATE_FRESH_INDEX_JSON_FILE ]]; then
 else
 	ARDUINO_VERSION_UPDATED=0
 	TOOLS_DEPS_UPDATED=0
+	get_the_latest_index_json_file() {
+		curl -H "Authorization: Token ${GITHUB_TOKEN}" \
+			-H "Accept: application/octet-stream" \
+			-Lfo "$INDEX_JSON_FILE" "${INDEX_JSON_FILE_URL}"
+	}
+	get_the_latest_index_json_file
 
 	UPDATED_JSON="$(cat "$INDEX_JSON_FILE")"
 	ARDUINO_VERSION_REMOTE=$(jq --raw-output '.packages[0] .platforms[0] .version' "$INDEX_JSON_FILE")
@@ -292,7 +327,5 @@ echo "index_json_status=${INDEX_JSON_STATUS}" >>${GITHUB_OUTPUT:-/dev/null}
 echo "INDEX_JSON_STATUS=${INDEX_JSON_STATUS}" >>${GITHUB_ENV:-/dev/null}
 echo "index_json_file_name=${INDEX_JSON_FILE_NAME}" >>${GITHUB_OUTPUT:-/dev/null}
 echo "INDEX_JSON_FILE_NAME=${INDEX_JSON_FILE_NAME}" >>${GITHUB_ENV:-/dev/null}
-echo "index_json_file_release_tag=${MILKV_DUO_INDEX_JSON_FILE_RELEASE_TAG}" >>${GITHUB_OUTPUT:-/dev/null}
-echo "INDEX_JSON_FILE_RELEASE_TAG=${MILKV_DUO_INDEX_JSON_FILE_RELEASE_TAG}" >>${GITHUB_ENV:-/dev/null}
 
 # vim:sw=8:ts=8:noexpandtab

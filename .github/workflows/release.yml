@@ -3,20 +3,20 @@ name: arduino duo release
 on:
   push:
     tags:
-      - 'v*.*.*'
-      - 'V*.*.*'
+      - "v*.*.*"
+      - "V*.*.*"
     paths-ignore:
       - '.github/workflows/docs.yml'
       - 'docs/**'
   workflow_dispatch:
     inputs:
       force-update:
-        description: (DANGER!!) force updating the package_sg200x_index.json file
+        description: (DANGER!!) force updating the package index json file
         required: false
         type: string
   
 concurrency:
-  group: "pages"
+  group: "release"
   cancel-in-progress: false
 
 jobs:
@@ -58,7 +58,7 @@ jobs:
         . $GITHUB_ENV
         if ! [[ ${INDEX_JSON_STATUS} =~ ^UPDATED_JSON:1 ]]; then
           echo "The arduino-sophgo package no updates!" >&2
-          echo "Something wroing with the version number?" >&2
+          echo "Something wroing with the version number??" >&2
           if [[ "${{ inputs.force-update }}" =~ ^(1|(Y|y)((E|e)(S|s))?|(T|t)rue)$ ]]; then
             echo "force updating ..." >&2
           else
@@ -94,52 +94,3 @@ jobs:
           burntool.tar.gz
           burntool.zip
           docs_html.tar.gz
-    - name: Install GitHub CLI for updating package index file within the specific release
-      run: sudo apt-get install -y gh
-    - name: Authenticate GitHub CLI
-      run: gh auth login --with-token <<< "${{ secrets.GITHUB_TOKEN }}"
-    - name: Get release by tag
-      id: get_release
-      env:
-        TAG_NAME: ${{ steps.package-build.outputs.index_json_file_release_tag }}
-      run: |
-        RELEASE_ID=$(gh api repos/$GITHUB_REPOSITORY/releases/tags/$TAG_NAME --jq '.id')
-        echo "id=$RELEASE_ID" >>$GITHUB_OUTPUT
-    - name: Upload new asset to release
-      env:
-        FILE_PATH: ${{ steps.package-build.outputs.index_json_file_name }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        set -e
-        _do() {
-          echo ">>>" "$@" >&2
-          "$@"
-        }
-        RELEASE_ID=${{ steps.get_release.outputs.id }}
-        FILE_NAME=$(basename $FILE_PATH)
-        if ! [[ -f "$FILE_PATH" ]]; then
-          echo "file '$FILE_PATH' not exist" >&2
-          exit 1
-        fi
-        ASSET_ID=$(_do gh api repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets --jq ".[] | select(.name == \"$FILE_NAME\") | .id")
-        if [[ -n "$ASSET_ID" ]]; then
-          # delete the old asset
-          gh api \
-            --method DELETE \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            /repos/$GITHUB_REPOSITORY/releases/assets/$ASSET_ID
-        fi
-        # upload the new asset
-        # gh api not work, weird
-        curl -L -X POST \
-          -H "Accept: application/vnd.github+json" \
-          -H "Authorization: Bearer $GITHUB_TOKEN" \
-          -H "X-GitHub-Api-Version: 2022-11-28" \
-          -H "Content-Type: application/octet-stream" \
-          "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=$FILE_NAME" \
-          --data-binary "@$FILE_PATH"
-    - name: Check release assets
-      run: |
-        RELEASE_ID=${{ steps.get_release.outputs.id }}
-        gh api repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets --jq '.[].name'
