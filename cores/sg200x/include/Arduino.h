@@ -48,6 +48,7 @@ void yield(void) __attribute__ ((weak, alias("__empty")));
 #include "HardwareSerial.h"
 #include "wiring_pulse.h"
 #include "Tone.h"
+#include "ControlPWM.h"
 
 #endif // __cplusplus
 
