@@ -2,6 +2,19 @@
 
   该项目是为sg200x支持Arduino而建立，可以适配绝大多数Arduino的API,  详情参考[官方文档](https://www.arduino.cc/reference/en/)。
 
+|  平台   |  MilkV Duo  |  MilkV Duo256   | MilkV DuoS  |
+|  ----  | ----  |  ----  | ----  |
+|  GPIO  | 支持 | 支持  | 支持 |
+|  UART  | 支持 | 支持  | 支持 |
+|  I2C  | 支持 |  支持  | 支持(1) |
+|  SPI  | 支持 | 支持  | 支持 |
+|  PWM  | 支持 | 支持  | 支持 |
+|  ADC  | 支持 |  支持  | 支持 |
+|  MailBox  | 支持 |  支持  | 暂不支持(2) |
+
+* *1: I2C-1 和 I2C-2 之间无法互相发送数据，原因暂不明确。I2C-1 和 I2C-2 任意一个和 I2C-4 收发数据都正常。*
+* *2: 大核心的镜像中缺少 Mailbox 的设备。*
+
 ## 快速上手
 
 本篇将说明如何安装 Arduino-Sg200x 支持，以及如何快速使用。
@@ -10,7 +23,7 @@
 
 执行以下步骤：
 
-1. Arduino IDE支持Windows，Linux， macOS三种操作系统，根据你的系统到[arduino官方网站](https://www.arduino.cc/en/software)下载对应安装包进行安装，建议使用1.8.X以上版本。
+1. Arduino IDE支持Windows，Linux， macOS三种操作系统，根据你的系统到[arduino官方网站](https://www.arduino.cc/en/software)下载对应安装包进行安装，建议使用2.3.X以上版本。
 
 2. 启动Arduino并打开 ``文件`` > ``首选项`` 窗口。
 
