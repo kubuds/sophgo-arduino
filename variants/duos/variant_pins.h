@@ -76,10 +76,10 @@
 // SPI
 #define PIN_SPI3_CS             (24)
 #define PIN_SPI3_SCK            (23)
-#define PIN_SPI3_MISO           (19)
-#define PIN_SPI3_MOSI           (21)
+#define PIN_SPI3_MISO           (21)
+#define PIN_SPI3_MOSI           (19)
 
-static const uint8_t KEY_BUILTIN = 21;
+//static const uint8_t KEY_BUILTIN = 21;
 
 static const uint8_t TX = 16;
 static const uint8_t RX = 17;
@@ -87,10 +87,10 @@ static const uint8_t RX = 17;
 static const uint8_t SDA = 2;
 static const uint8_t SCL = 1;
 
-static const uint8_t SS = 12;
-static const uint8_t MOSI = 10;
-static const uint8_t MISO = 11;
-static const uint8_t SCK = 9;
+static const uint8_t SS = 23;
+static const uint8_t MOSI = 19;
+static const uint8_t MISO = 21;
+static const uint8_t SCK = 24;
 
 typedef enum
 {

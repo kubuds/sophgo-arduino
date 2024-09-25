@@ -317,19 +317,19 @@ dev_pin_map_t iic_scl_map[] = {
     {0xFFFFFFFF, 0xFF, 0}};
 
 dev_pin_map_t spi_cs_map[] = {
-    {VIVO_D5, VIVO_D5__SPI3_CS_X, 3},
+    {VIVO_D5, VIVO_D5__SPI3_CS_X, 2},
     {0xFFFFFFFF, 0xFF, 0}};
 
 dev_pin_map_t spi_sck_map[] = {
-    {VIVO_D6, VIVO_D6__SPI3_SCK, 3},
+    {VIVO_D6, VIVO_D6__SPI3_SCK, 2},
     {0xFF, 0xFFFFFFFF, 0}};
 
 dev_pin_map_t spi_miso_map[] = {
-    {VIVO_D7, VIVO_D7__SPI3_SDI, 3},
+    {VIVO_D7, VIVO_D7__SPI3_SDI, 2}, 
     {0xFF, 0xFFFFFFFF, 0}};
 
 dev_pin_map_t spi_mosi_map[] = {
-    {VIVO_D8, VIVO_D8__SPI3_SDO, 3},
+    {VIVO_D8, VIVO_D8__SPI3_SDO, 2},
     {0xFF, 0xFFFFFFFF, 0}};
 
 pin_name_t out_pin_map[] = {
