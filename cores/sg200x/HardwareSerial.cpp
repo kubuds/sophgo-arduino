@@ -114,7 +114,6 @@ int HardwareSerial::read(void)
     if (ret) {
         return _data;
     } else {
-        while (1);
         return -1;
     }
 }
