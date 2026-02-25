@@ -79,6 +79,15 @@
 #define PIN_SPI3_MISO           (21)
 #define PIN_SPI3_MOSI           (19)
 
+// Default SPI pins (mapped to SPI3)
+#define PIN_SPI2_CS             PIN_SPI3_CS
+#define PIN_SPI2_SCK            PIN_SPI3_SCK
+#define PIN_SPI2_MISO           PIN_SPI3_MISO
+#define PIN_SPI2_MOSI           PIN_SPI3_MOSI
+
+// Default SPI bus index
+#define DEFAULT_SPI_BUS         3
+
 //static const uint8_t KEY_BUILTIN = 21;
 
 static const uint8_t TX = 16;

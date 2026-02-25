@@ -231,4 +231,7 @@ void SPIClass::transferBytes(void* data, void* out, uint32_t size)
 #endif
 }
 
-SPIClass SPI(2);
+#ifndef DEFAULT_SPI_BUS
+#define DEFAULT_SPI_BUS 2
+#endif
+SPIClass SPI(DEFAULT_SPI_BUS);

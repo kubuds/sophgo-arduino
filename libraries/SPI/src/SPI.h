@@ -24,6 +24,10 @@
 #include "common.h"
 #include "csi_spi.h"
 
+#ifndef DEFAULT_SPI_BUS
+#define DEFAULT_SPI_BUS 2
+#endif
+
 #define SPI_HAS_TRANSACTION
 
 typedef enum {
@@ -51,7 +55,7 @@ public:
 class SPIClass
 {
   public:
-    SPIClass(uint8_t spiBus = 2);
+    SPIClass(uint8_t spiBus = DEFAULT_SPI_BUS);
     ~SPIClass();
 
     /// @brief SPI begin
