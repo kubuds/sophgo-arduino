@@ -10,7 +10,7 @@
   "current": {
     "name": "SG200X",
     "architecture": "SG200X",
-    "version": "0.2.6",
+    "version": "0.2.7",
     "category": "SG200X",
     "archiveFileName": "arduino-sophgo.zip",
     "help": {
