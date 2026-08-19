@@ -105,12 +105,12 @@ void TwoWire::begin(uint16_t address, csi_iic_addr_mode_t addr_mode)
 void TwoWire::setClock(uint32_t baudrate)
 {
     csi_iic_speed_t speed = IIC_BUS_SPEED_HIGH;
-    if (baudrate <= 1000000) {
-        speed = IIC_BUS_SPEED_FAST_PLUS;
+    if (baudrate <= 100000) {
+        speed = IIC_BUS_SPEED_STANDARD;
     } else if (baudrate <= 400000) {
         speed = IIC_BUS_SPEED_FAST;
-    } else if (baudrate <= 100000) {
-        speed = IIC_BUS_SPEED_STANDARD;
+    } else if (baudrate <= 1000000) {
+        speed = IIC_BUS_SPEED_FAST_PLUS;
     }
     csi_iic_speed(&_iic, speed);
 }
@@ -193,16 +193,21 @@ uint8_t TwoWire::endTransmission(bool stopBit)
     }
 
     int ret = csi_iic_master_send(&_iic, txAddress, data, i, _timeout, stopBit);
+    if (ret > 0) {
+        return 0;
+    }
+
     switch (ret) {
     case CSI_OK:
         return 0;
+    case CSI_IIC_ADDR_NACK:
+        return 2;
+    case CSI_IIC_DATA_NACK:
+        return 3;
     case CSI_TIMEOUT:
         return 5;
     default:
-	if (ret > 0)
-            return 0;
-        else
-	    return 4;
+        return 4;
     }
 
     return 0;

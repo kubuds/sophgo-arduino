@@ -25,10 +25,10 @@ static csi_error_t wait_iic_transmit(dw_iic_regs_t *iic_base, uint32_t timeout)
     csi_error_t ret = CSI_OK;
 
     do {
-        uint32_t timecount = timeout + millis();
+        uint64_t timestart = millis();
 
         while ((dw_iic_get_transmit_fifo_num(iic_base) != 0U) && (ret == CSI_OK)) {
-            if (millis() >= timecount) {
+            if ((millis() - timestart) > timeout) {
                 ret = CSI_TIMEOUT;
             }
         }
@@ -44,10 +44,10 @@ void wait_iic_transmit_fifo_empty(dw_iic_regs_t *iic_base, uint32_t timeout)
     csi_error_t ret = CSI_OK;
 
     do {
-        uint32_t timecount = timeout + millis();
+        uint64_t timestart = millis();
 
         while ((dw_iic_get_transmit_fifo_num(iic_base) != 0U) && (ret == CSI_OK)) {
-            if (millis() >= timecount) {
+            if ((millis() - timestart) > timeout) {
                 ret = CSI_TIMEOUT;
             }
         }
@@ -68,10 +68,10 @@ static csi_error_t wait_iic_receive(dw_iic_regs_t *iic_base, uint32_t wait_data_
     csi_error_t ret = CSI_OK;
 
     do {
-        uint32_t timecount = timeout + millis();
+        uint64_t timestart = millis();
 
         while ((dw_iic_get_receive_fifo_num(iic_base) < wait_data_num) && (ret == CSI_OK)) {
-            if (millis() >= timecount) {
+            if ((millis() - timestart) > timeout) {
                 ret = CSI_TIMEOUT;
             }
         }
@@ -706,6 +706,25 @@ csi_error_t csi_iic_dev_addr(csi_iic_t *iic, uint32_t dev_addr)
     dw_iic_enable(iic_base);
     return ret;
 }
+static int32_t iic_check_abort(dw_iic_regs_t *iic_base)
+{
+    uint32_t source = dw_iic_take_abort_source(iic_base);
+
+    if (!source) {
+        return 0;
+    }
+
+    if (source & DW_IIC_TX_ABRT_7B_ADDR_NOACK) {
+        return CSI_IIC_ADDR_NACK;
+    }
+
+    if (source & DW_IIC_TX_ABRT_TXDATA_NOACK) {
+        return CSI_IIC_DATA_NACK;
+    }
+
+    return CSI_ERROR;
+}
+
 /**
   \brief       Start sending data as IIC Master.
                This function is blocking
@@ -720,8 +739,9 @@ int32_t csi_iic_master_send(csi_iic_t *iic, uint32_t devaddr, const void *data, 
 {
     CSI_PARAM_CHK(iic, CSI_ERROR);
     CSI_PARAM_CHK(data, CSI_ERROR);
-    csi_error_t ret = CSI_OK;
-    uint32_t timecount;
+    int32_t ret = CSI_OK;
+    int32_t abort_ret;
+    uint64_t timestart;
     int32_t send_count = size;
     uint8_t *send_data = (uint8_t *)data;
     uint8_t iic_idx = HANDLE_DEV_IDX(iic);
@@ -737,7 +757,7 @@ int32_t csi_iic_master_send(csi_iic_t *iic, uint32_t devaddr, const void *data, 
     dw_iic_set_target_address(iic_base, devaddr);
     dw_iic_enable(iic_base);
 
-    timecount = timeout + millis();
+    timestart = millis();
 
     while (send_count) {
         if (iic_base->IC_STATUS & DW_IIC_TXFIFO_NOT_FULL_STATE) {
@@ -746,7 +766,7 @@ int32_t csi_iic_master_send(csi_iic_t *iic, uint32_t devaddr, const void *data, 
             } else {
                 dw_iic_transmit_data(iic_base, *send_data++);
             }
-        } else if (millis() >= timecount) {
+        } else if ((millis() - timestart) > timeout) {
             pr_debug("Timeout for waiting ic status TFNF\n");
             ret = CSI_TIMEOUT;
             goto SEND_ERROR;
@@ -757,6 +777,11 @@ int32_t csi_iic_master_send(csi_iic_t *iic, uint32_t devaddr, const void *data, 
         if (dw_iic_xfer_finish(iic_base)) {
             ret = CSI_ERROR;
         }
+
+        if ((abort_ret = iic_check_abort(iic_base)) != 0) {
+            ret = abort_ret;
+        }
+
         goto SEND_ERROR;
     }
 
@@ -783,9 +808,10 @@ int32_t csi_iic_master_receive(csi_iic_t *iic, uint32_t devaddr, void *data, uin
 {
     CSI_PARAM_CHK(iic, CSI_ERROR);
     CSI_PARAM_CHK(data, CSI_ERROR);
-    csi_error_t ret = CSI_OK;
-    uint32_t timecount;
-    int32_t read_count = size, active = 0;
+    int32_t ret = CSI_OK;
+    int32_t abort_ret;
+    uint64_t timestart;
+    int32_t queued = 0, received = 0;
     uint8_t *receive_data = (uint8_t *)data;
     uint8_t iic_idx = HANDLE_DEV_IDX(iic);
     dw_iic_regs_t *iic_base = (dw_iic_regs_t *)HANDLE_REG_BASE(iic);
@@ -800,29 +826,28 @@ int32_t csi_iic_master_receive(csi_iic_t *iic, uint32_t devaddr, void *data, uin
     dw_iic_set_target_address(iic_base, devaddr);
     dw_iic_enable(iic_base);
 
-    timecount = timeout + millis();
+    timestart = millis();
 
-    while (read_count) {
-        if (!active) {
-            /*
-            * Avoid writing to ic_cmd_data multiple times
-            * in case this loop spins too quickly and the
-            * ic_status RFNE bit isn't set after the first
-            * write. Subsequent writes to ic_cmd_data can
-            * trigger spurious i2c transfer.
-            */
-            dw_iic_transmit_data(iic_base, DW_IIC_DATA_CMD | (stop ? DW_IIC_DATA_STOP : DW_IIC_DATA_RESTART));
-            //mmio_write_32((uintptr_t)&i2c_base->ic_cmd_data, (dev <<1) | BIT_I2C_CMD_DATA_READ_BIT | BIT_I2C_CMD_DATA_STOP_BIT);
-            active = 1;
+    while (received < (int32_t)size) {
+        while ((queued < (int32_t)size) &&
+               (iic_base->IC_STATUS & DW_IIC_TXFIFO_NOT_FULL_STATE)) {
+            uint32_t cmd = DW_IIC_DATA_CMD;
+
+            if (stop && (queued == (int32_t)size - 1)) {
+                cmd |= DW_IIC_DATA_STOP;
+            }
+
+            dw_iic_transmit_data(iic_base, cmd);
+            queued++;
         }
 
-        //if (iic_base->IC_RAW_INTR_STAT & DW_IIC_RAW_RX_FULL) {
         if (iic_base->IC_STATUS & DW_IIC_RXFIFO_NOT_EMPTY_STATE) {
-        //if (dw_iic_get_receive_fifo_num(iic_base)) {
             *receive_data++ = dw_iic_receive_data(iic_base);
-            read_count--;
-            active = 0;
-        } else if (millis() >= timecount) {
+            received++;
+        } else if ((abort_ret = iic_check_abort(iic_base)) != 0) {
+            ret = abort_ret;
+            goto RECV_ERROR;
+        } else if ((millis() - timestart) > timeout) {
             pr_debug("Timeout for waiting ic status RFNE\n");
             ret = CSI_TIMEOUT;
             goto RECV_ERROR;
@@ -833,6 +858,11 @@ int32_t csi_iic_master_receive(csi_iic_t *iic, uint32_t devaddr, void *data, uin
         if (dw_iic_xfer_finish(iic_base)) {
             ret = CSI_ERROR;
         }
+
+        if ((abort_ret = iic_check_abort(iic_base)) != 0) {
+            ret = abort_ret;
+        }
+
         goto RECV_ERROR;
     }
 
@@ -1039,7 +1069,7 @@ int32_t csi_iic_mem_send(csi_iic_t *iic, uint32_t devaddr, uint16_t memaddr, csi
     CSI_PARAM_CHK(iic, CSI_ERROR);
     CSI_PARAM_CHK(data, CSI_ERROR);
     csi_error_t ret = CSI_OK;
-    uint32_t timecount;
+    uint64_t timestart;
     uint32_t send_count = size;
     uint8_t *send_data = (uint8_t *)data;
     uint8_t memaddr_len;
@@ -1067,7 +1097,7 @@ int32_t csi_iic_mem_send(csi_iic_t *iic, uint32_t devaddr, uint16_t memaddr, csi
         goto SEND_ERROR;
     }
 
-    timecount = timeout + millis();
+    timestart = millis();
 
     while (send_count > 0) {
         if (iic_base->IC_STATUS & DW_IIC_TXFIFO_NOT_FULL_STATE) {
@@ -1078,7 +1108,7 @@ int32_t csi_iic_mem_send(csi_iic_t *iic, uint32_t devaddr, uint16_t memaddr, csi
                 dw_iic_transmit_data(iic_base, *send_data++);
                 pr_debug("send_count != 0\n");
             }
-        } else if (millis() >= timecount) {
+        } else if ((millis() - timestart) > timeout) {
             pr_debug("ic status is not TFNF\n");
             ret = CSI_TIMEOUT;
             goto SEND_ERROR;
@@ -1113,7 +1143,7 @@ int32_t csi_iic_mem_receive(csi_iic_t *iic, uint32_t devaddr, uint16_t memaddr, 
     CSI_PARAM_CHK(iic, CSI_ERROR);
     CSI_PARAM_CHK(data, CSI_ERROR);
     csi_error_t ret = CSI_OK;
-    uint32_t timecount;
+    uint64_t timestart;
     int recv_count = size;
     uint8_t *recv_data = (uint8_t *)data;
     uint8_t memaddr_len;
@@ -1141,7 +1171,7 @@ int32_t csi_iic_mem_receive(csi_iic_t *iic, uint32_t devaddr, uint16_t memaddr, 
         ret = CSI_ERROR;
         goto RECV_ERROR;
     }
-    timecount = timeout + millis();
+    timestart = millis();
     for (int i = 0 ; i < recv_count; i ++) {
         if (i != (recv_count -1)) {
             dw_iic_transmit_data(iic_base, DW_IIC_DATA_CMD);
@@ -1155,7 +1185,7 @@ int32_t csi_iic_mem_receive(csi_iic_t *iic, uint32_t devaddr, uint16_t memaddr, 
         //if (dw_iic_get_receive_fifo_num(iic_base)) {
             *recv_data++ = dw_iic_receive_data(iic_base);
             --recv_count;
-        } else if (millis() >= timecount) {
+        } else if ((millis() - timestart) > timeout) {
             pr_debug("Timed out read ic_cmd_data\n");
             ret = CSI_TIMEOUT;
             goto RECV_ERROR;
@@ -1197,10 +1227,10 @@ int32_t csi_iic_slave_send(csi_iic_t *iic, const void *data, uint32_t size, uint
         uint32_t intr_state;
         iic_base = (dw_iic_regs_t *)HANDLE_REG_BASE(iic);
         dw_iic_enable(iic_base);
-        uint32_t timecount = millis() + timeout;
+        uint64_t timestart = millis();
 
         while (1) {
-            if (millis() >= timecount) {
+            if ((millis() - timestart) > timeout) {
                 break;
             }
 
