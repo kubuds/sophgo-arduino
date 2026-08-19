@@ -785,7 +785,7 @@ int32_t csi_iic_master_receive(csi_iic_t *iic, uint32_t devaddr, void *data, uin
     CSI_PARAM_CHK(data, CSI_ERROR);
     csi_error_t ret = CSI_OK;
     uint32_t timecount;
-    int32_t read_count = size, active = 0;
+    int32_t queued = 0, received = 0;
     uint8_t *receive_data = (uint8_t *)data;
     uint8_t iic_idx = HANDLE_DEV_IDX(iic);
     dw_iic_regs_t *iic_base = (dw_iic_regs_t *)HANDLE_REG_BASE(iic);
@@ -802,26 +802,22 @@ int32_t csi_iic_master_receive(csi_iic_t *iic, uint32_t devaddr, void *data, uin
 
     timecount = timeout + millis();
 
-    while (read_count) {
-        if (!active) {
-            /*
-            * Avoid writing to ic_cmd_data multiple times
-            * in case this loop spins too quickly and the
-            * ic_status RFNE bit isn't set after the first
-            * write. Subsequent writes to ic_cmd_data can
-            * trigger spurious i2c transfer.
-            */
-            dw_iic_transmit_data(iic_base, DW_IIC_DATA_CMD | (stop ? DW_IIC_DATA_STOP : DW_IIC_DATA_RESTART));
-            //mmio_write_32((uintptr_t)&i2c_base->ic_cmd_data, (dev <<1) | BIT_I2C_CMD_DATA_READ_BIT | BIT_I2C_CMD_DATA_STOP_BIT);
-            active = 1;
+    while (received < (int32_t)size) {
+        while ((queued < (int32_t)size) &&
+               (iic_base->IC_STATUS & DW_IIC_TXFIFO_NOT_FULL_STATE)) {
+            uint32_t cmd = DW_IIC_DATA_CMD;
+
+            if (stop && (queued == (int32_t)size - 1)) {
+                cmd |= DW_IIC_DATA_STOP;
+            }
+
+            dw_iic_transmit_data(iic_base, cmd);
+            queued++;
         }
 
-        //if (iic_base->IC_RAW_INTR_STAT & DW_IIC_RAW_RX_FULL) {
         if (iic_base->IC_STATUS & DW_IIC_RXFIFO_NOT_EMPTY_STATE) {
-        //if (dw_iic_get_receive_fifo_num(iic_base)) {
             *receive_data++ = dw_iic_receive_data(iic_base);
-            read_count--;
-            active = 0;
+            received++;
         } else if (millis() >= timecount) {
             pr_debug("Timeout for waiting ic status RFNE\n");
             ret = CSI_TIMEOUT;
