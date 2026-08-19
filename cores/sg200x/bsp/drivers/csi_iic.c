@@ -706,6 +706,25 @@ csi_error_t csi_iic_dev_addr(csi_iic_t *iic, uint32_t dev_addr)
     dw_iic_enable(iic_base);
     return ret;
 }
+static int32_t iic_check_abort(dw_iic_regs_t *iic_base)
+{
+    uint32_t source = dw_iic_take_abort_source(iic_base);
+
+    if (!source) {
+        return 0;
+    }
+
+    if (source & DW_IIC_TX_ABRT_7B_ADDR_NOACK) {
+        return CSI_IIC_ADDR_NACK;
+    }
+
+    if (source & DW_IIC_TX_ABRT_TXDATA_NOACK) {
+        return CSI_IIC_DATA_NACK;
+    }
+
+    return CSI_ERROR;
+}
+
 /**
   \brief       Start sending data as IIC Master.
                This function is blocking
@@ -720,7 +739,8 @@ int32_t csi_iic_master_send(csi_iic_t *iic, uint32_t devaddr, const void *data, 
 {
     CSI_PARAM_CHK(iic, CSI_ERROR);
     CSI_PARAM_CHK(data, CSI_ERROR);
-    csi_error_t ret = CSI_OK;
+    int32_t ret = CSI_OK;
+    int32_t abort_ret;
     uint64_t timestart;
     int32_t send_count = size;
     uint8_t *send_data = (uint8_t *)data;
@@ -757,6 +777,11 @@ int32_t csi_iic_master_send(csi_iic_t *iic, uint32_t devaddr, const void *data, 
         if (dw_iic_xfer_finish(iic_base)) {
             ret = CSI_ERROR;
         }
+
+        if ((abort_ret = iic_check_abort(iic_base)) != 0) {
+            ret = abort_ret;
+        }
+
         goto SEND_ERROR;
     }
 
@@ -783,7 +808,8 @@ int32_t csi_iic_master_receive(csi_iic_t *iic, uint32_t devaddr, void *data, uin
 {
     CSI_PARAM_CHK(iic, CSI_ERROR);
     CSI_PARAM_CHK(data, CSI_ERROR);
-    csi_error_t ret = CSI_OK;
+    int32_t ret = CSI_OK;
+    int32_t abort_ret;
     uint64_t timestart;
     int32_t queued = 0, received = 0;
     uint8_t *receive_data = (uint8_t *)data;
@@ -818,6 +844,9 @@ int32_t csi_iic_master_receive(csi_iic_t *iic, uint32_t devaddr, void *data, uin
         if (iic_base->IC_STATUS & DW_IIC_RXFIFO_NOT_EMPTY_STATE) {
             *receive_data++ = dw_iic_receive_data(iic_base);
             received++;
+        } else if ((abort_ret = iic_check_abort(iic_base)) != 0) {
+            ret = abort_ret;
+            goto RECV_ERROR;
         } else if ((millis() - timestart) > timeout) {
             pr_debug("Timeout for waiting ic status RFNE\n");
             ret = CSI_TIMEOUT;
@@ -829,6 +858,11 @@ int32_t csi_iic_master_receive(csi_iic_t *iic, uint32_t devaddr, void *data, uin
         if (dw_iic_xfer_finish(iic_base)) {
             ret = CSI_ERROR;
         }
+
+        if ((abort_ret = iic_check_abort(iic_base)) != 0) {
+            ret = abort_ret;
+        }
+
         goto RECV_ERROR;
     }
 

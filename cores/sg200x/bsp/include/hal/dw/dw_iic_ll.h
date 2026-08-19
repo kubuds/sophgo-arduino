@@ -486,6 +486,19 @@ static inline void dw_iic_flush_rxfifo(dw_iic_regs_t *iic_base)
 		iic_base->IC_DATA_CMD;
 }
 
+/* Abort source, or 0. Clears it so it cannot leak into the next transfer. */
+static inline uint32_t dw_iic_take_abort_source(dw_iic_regs_t *iic_base)
+{
+    uint32_t source = 0U;
+
+    if (iic_base->IC_RAW_INTR_STAT & DW_IIC_RAW_TX_ABRT) {
+        source = iic_base->IC_TX_ABRT_SOURCE;
+        iic_base->IC_CLR_TX_ABRT;
+    }
+
+    return source;
+}
+
 static inline void dw_iic_set_slave_10bit_addr_mode(dw_iic_regs_t *iic_base)
 {
     iic_base->IC_CON |= DW_IIC_CON_SLAVE_ADDR_MODE;

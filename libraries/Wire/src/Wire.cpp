@@ -193,16 +193,21 @@ uint8_t TwoWire::endTransmission(bool stopBit)
     }
 
     int ret = csi_iic_master_send(&_iic, txAddress, data, i, _timeout, stopBit);
+    if (ret > 0) {
+        return 0;
+    }
+
     switch (ret) {
     case CSI_OK:
         return 0;
+    case CSI_IIC_ADDR_NACK:
+        return 2;
+    case CSI_IIC_DATA_NACK:
+        return 3;
     case CSI_TIMEOUT:
         return 5;
     default:
-	if (ret > 0)
-            return 0;
-        else
-	    return 4;
+        return 4;
     }
 
     return 0;
