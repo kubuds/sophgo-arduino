@@ -105,12 +105,12 @@ void TwoWire::begin(uint16_t address, csi_iic_addr_mode_t addr_mode)
 void TwoWire::setClock(uint32_t baudrate)
 {
     csi_iic_speed_t speed = IIC_BUS_SPEED_HIGH;
-    if (baudrate <= 1000000) {
-        speed = IIC_BUS_SPEED_FAST_PLUS;
+    if (baudrate <= 100000) {
+        speed = IIC_BUS_SPEED_STANDARD;
     } else if (baudrate <= 400000) {
         speed = IIC_BUS_SPEED_FAST;
-    } else if (baudrate <= 100000) {
-        speed = IIC_BUS_SPEED_STANDARD;
+    } else if (baudrate <= 1000000) {
+        speed = IIC_BUS_SPEED_FAST_PLUS;
     }
     csi_iic_speed(&_iic, speed);
 }
