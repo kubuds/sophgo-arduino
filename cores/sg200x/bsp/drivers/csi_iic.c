@@ -706,6 +706,7 @@ csi_error_t csi_iic_dev_addr(csi_iic_t *iic, uint32_t dev_addr)
     dw_iic_enable(iic_base);
     return ret;
 }
+
 static int32_t iic_check_abort(dw_iic_regs_t *iic_base)
 {
     uint32_t source = dw_iic_take_abort_source(iic_base);

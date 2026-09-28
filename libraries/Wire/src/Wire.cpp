@@ -178,6 +178,7 @@ void TwoWire::beginTransmission(uint16_t address)
 //  2 : NACK on transmit of address
 //  3 : NACK on transmit of data
 //  4 : Other error
+//  5 : Timeout
 uint8_t TwoWire::endTransmission(bool stopBit)
 {
     if (!_master) {
