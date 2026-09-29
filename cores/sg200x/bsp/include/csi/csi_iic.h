@@ -64,6 +64,10 @@ typedef enum {
     IIC_EVENT_ERROR                          ///< The receive buffer was completely filled to FIFO and more data arrived. That data is lost
 } csi_iic_event_t;
 
+/* not csi_error_t: master send/receive return a byte count on success */
+#define CSI_IIC_ADDR_NACK   (-16)
+#define CSI_IIC_DATA_NACK   (-17)
+
 /**
   \struct      csi_iic_t
   \brief       iic ctrl block
