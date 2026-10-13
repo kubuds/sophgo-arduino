@@ -1,7 +1,10 @@
 #ifndef VARIANT_H
 #define VARIANT_H
+/* SoC selection: picks cores/sg200x/soc/sg2000/ and its headers. */
+#define SOC_SG2000            1
+#include "soc/sg2000/soc_pins.h"
+#include "soc/sg200x_common.h"
 #include "variant_pins.h"
-#include "../duo/variant_soc.h"
 
 #define DEBUG_SERIAL            Serial3
 #define DEBUG_UART_BASE         DW_UART3_BASE
