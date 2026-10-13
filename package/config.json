@@ -26,7 +26,8 @@
     "boards": [
       { "name": "Milk-V Duo" },
       { "name": "Milk-V Duo256M" },
-      { "name": "Milk-V DuoS" }
+      { "name": "Milk-V DuoS" },
+      { "name": "Milk-V Duo Module 01 EVB" }
     ],
     "include": [
       "boards.txt",

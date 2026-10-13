@@ -19,6 +19,7 @@
 | duo | cv1800b |
 | duo256 | sg2002 |
 | duos | sg2000 |
+| duomodule01 | sg2000（Duo Module 01 EVB，与 DuoS 同镜像、同内存布局；未经实物验证） |
 
 ### 新增一块同芯片的板子
 
