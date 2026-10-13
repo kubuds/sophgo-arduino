@@ -4,17 +4,18 @@ on:
   push:
     tags:
       - "v*.*.*"
-      - "V*.*.*"
-    paths-ignore:
-      - '.github/workflows/docs.yml'
-      - 'docs/**'
   workflow_dispatch:
     inputs:
-      force-update:
-        description: (DANGER!!) force updating the package index json file
-        required: false
+      tag:
+        description: tag to release, e.g. v0.3.0
+        required: true
         type: string
-  
+      force-update:
+        description: (DANGER!!) replace an already published platform version in the index
+        required: false
+        default: false
+        type: boolean
+
 concurrency:
   group: "release"
   cancel-in-progress: false
@@ -26,71 +27,51 @@ jobs:
       contents: write
 
     steps:
-    - name: checkout current triggered tag
-      if: github.event_name == 'push'
+    - name: checkout
       uses: actions/checkout@v4
       with:
+        ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
         fetch-depth: 0
-    - name: checkout input tag
-      if: github.event_name == 'workflow_dispatch'
-      uses: actions/checkout@v4
+
+    - name: setup go
+      uses: actions/setup-go@v5
       with:
-        ref: ${{ inputs.tag }}
-        fetch-depth: 0
+        go-version-file: tools/burntool/go.mod
+        cache-dependency-path: tools/burntool/go.sum
+
     - name: setup python
       uses: actions/setup-python@v5
       with:
         python-version: '3.x'
 
-    - name: Install Dependencies
-      run: pip3 install sphinx sphinx-copybutton sphinx_multiversion sphinx_rtd_theme
+    - name: test burntool
+      working-directory: tools/burntool
+      run: |
+        go vet ./...
+        go test ./...
 
-    - name: Build
+    - name: build release files
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      id: package-build
-      run: |
-        set -e
-        echo $PWD
-        echo $GITHUB_WORKSPACE
-        cd ./package/
-        ./release.sh
-        . $GITHUB_ENV
-        if ! [[ ${INDEX_JSON_STATUS} =~ ^UPDATED_JSON:1 ]]; then
-          echo "The arduino-sophgo package no updates!" >&2
-          echo "Something wroing with the version number??" >&2
-          if [[ "${{ inputs.force-update }}" =~ ^(1|(Y|y)((E|e)(S|s))?|(T|t)rue)$ ]]; then
-            echo "force updating ..." >&2
-          else
-            exit 1
-          fi
-        fi
-        mv $GITHUB_WORKSPACE/../arduino-sophgo.zip $GITHUB_WORKSPACE/
-        mv $GITHUB_WORKSPACE/../$INDEX_JSON_FILE_NAME $GITHUB_WORKSPACE/
-        mv $GITHUB_WORKSPACE/../burntool.tar.gz $GITHUB_WORKSPACE/
-        mv $GITHUB_WORKSPACE/../burntool.zip $GITHUB_WORKSPACE/
+        RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        FORCE: ${{ inputs.force-update == true && '--force' || '' }}
+      run: python3 package/release.py --tag "$RELEASE_TAG" --out dist $FORCE
 
-    - name: Build Doc
+    - name: build docs
       run: |
-        cd $GITHUB_WORKSPACE/docs
+        pip3 install sphinx sphinx-copybutton sphinx_multiversion sphinx_rtd_theme
+        cd docs
         make html
-        tar -zcvf docs_html.tar.gz ./build/
-        mv docs_html.tar.gz $GITHUB_WORKSPACE/
+        tar -zcf ../dist/docs_html.tar.gz ./build/
 
-    - name: Create Release and Upload Release Asset
+    - name: create release and upload assets
       uses: softprops/action-gh-release@v2
-      if: startsWith(github.ref, 'refs/tags/')
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref }}
-        name: Release  ${{ github.ref_name }}
+        tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        name: Release ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
         body: TODO New Release.
         draft: false
         prerelease: false
-        files: |
-          arduino-sophgo.zip
-          ${{ steps.package-build.outputs.index_json_file_name }}
-          burntool.tar.gz
-          burntool.zip
-          docs_html.tar.gz
+        files: dist/*
