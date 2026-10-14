@@ -24,10 +24,18 @@
       "online": "https://community.milkv.io/"
     },
     "boards": [
-      { "name": "Milk-V Duo" },
-      { "name": "Milk-V Duo256M" },
-      { "name": "Milk-V DuoS" },
-      { "name": "Milk-V Duo Module 01 EVB" }
+      {
+        "name": "Milk-V Duo"
+      },
+      {
+        "name": "Milk-V Duo256M"
+      },
+      {
+        "name": "Milk-V DuoS"
+      },
+      {
+        "name": "Milk-V Duo Module 01 EVB"
+      }
     ],
     "include": [
       "boards.txt",
@@ -47,19 +55,8 @@
       "packager": "sophgo",
       "name": "burntool",
       "version": "1.0.0",
-      "source": "go",
-      "dir": "tools/burntool",
-      "archiveFileName": "burntool-{version}-{host}.{ext}",
-      "hosts": {
-        "x86_64-mingw32": "windows/amd64",
-        "i686-mingw32": "windows/386",
-        "arm64-mingw32": "windows/arm64",
-        "x86_64-linux-gnu": "linux/amd64",
-        "aarch64-linux-gnu": "linux/arm64",
-        "riscv64-linux-gnu": "linux/riscv64",
-        "x86_64-apple-darwin": "darwin/amd64",
-        "arm64-apple-darwin": "darwin/arm64"
-      }
+      "source": "systems-json",
+      "url": "https://github.com/kubuds/sg200x-burn/releases/download/v{version}/burntool-{version}-systems.json"
     },
     {
       "packager": "sophgo",

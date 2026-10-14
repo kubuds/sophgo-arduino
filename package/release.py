@@ -4,11 +4,16 @@
 Produces, in the output directory:
 
 * the platform archive (core, variants, libraries, board definitions),
-* one burntool archive per supported host, cross-compiled with Go,
 * the package index JSON, merged with the index of the previous release
   so older versions stay installable.
 
-Only the Python standard library, git and go are required.
+Tools (the burntool uploader, the xpack gcc) are not built here. Their
+download URLs and checksums come either verbatim from config.json
+(source "external") or from a systems JSON published by another
+repository's release (source "systems-json", used for burntool from
+kubuds/sg200x-burn).
+
+Only the Python standard library and git are required.
 
     python3 package/release.py --tag v0.3.0 --out dist
     python3 package/release.py --version 0.3.0 --fresh-index --skip-tools
@@ -21,11 +26,9 @@ import hashlib
 import json
 import os
 import re
-import shutil
 import subprocess
 import sys
 import tarfile
-import tempfile
 import urllib.request
 import zipfile
 from dataclasses import dataclass
@@ -64,8 +67,8 @@ class Artifact:
 # configuration and version
 
 
-def load_config() -> dict:
-    with CONFIG_FILE.open(encoding="utf-8") as fh:
+def load_config(path: Path = CONFIG_FILE) -> dict:
+    with path.open(encoding="utf-8") as fh:
         return json.load(fh)
 
 
@@ -158,40 +161,34 @@ def build_platform_archive(cfg: dict, version: str, out: Path) -> Artifact:
     return Artifact(dest, download_url(cfg, version, name))
 
 
-def build_go_tool(cfg: dict, tool: dict, version: str, out: Path) -> list[dict]:
-    """Cross-compile a Go tool for every host and archive each binary."""
-    go = shutil.which("go")
-    if go is None:
-        raise ReleaseError("go not found in PATH; install Go or pass --skip-tools")
-    src = REPO_DIR / tool["dir"]
-    tool_version = tool["version"]
-    systems = []
-    with tempfile.TemporaryDirectory() as tmp:
-        for host, target in tool["hosts"].items():
-            goos, goarch = target.split("/")
-            exe = tool["name"] + (".exe" if goos == "windows" else "")
-            binary = Path(tmp) / host / exe
-            binary.parent.mkdir(parents=True)
-            env = dict(os.environ, GOOS=goos, GOARCH=goarch, CGO_ENABLED="0")
-            subprocess.run(
-                [go, "build", "-trimpath",
-                 "-ldflags", f"-s -w -X main.version={tool_version}",
-                 "-o", str(binary), "."],
-                cwd=src, env=env, check=True,
-            )
-            ext = "zip" if goos == "windows" else "tar.gz"
-            name = tool["archiveFileName"].format(version=tool_version, host=host, ext=ext)
-            dest = out / name
-            make_archive(dest, tool["name"], [(exe, binary)])
-            art = Artifact(dest, download_url(cfg, version, name))
-            log(f"tool archive: {dest}")
-            systems.append({
-                "host": host,
-                "url": art.url,
-                "archiveFileName": art.name,
-                "checksum": art.checksum,
-                "size": art.size,
-            })
+def fetch_tool_systems(tool: dict) -> list[dict]:
+    """Download the systems list a tool repository published for its release.
+
+    The file has the shape {"name", "version", "systems": [...]}, where each
+    system already carries url, archiveFileName, checksum and size in the
+    Board Manager format, so it is spliced into the index unchanged.
+    """
+    url = tool["url"].format(version=tool["version"])
+    log(f"fetching {tool['name']} systems from {url}")
+    try:
+        with urllib.request.urlopen(url) as resp:
+            data = json.load(resp)
+    except Exception as exc:
+        raise ReleaseError(f"cannot fetch systems for {tool['name']}: {exc}") from exc
+
+    if data.get("name") != tool["name"]:
+        raise ReleaseError(f"{url} describes {data.get('name')!r}, not {tool['name']!r}")
+    if data.get("version") != tool["version"]:
+        raise ReleaseError(
+            f"{url} is version {data.get('version')!r}, config wants {tool['version']!r}")
+    systems = data.get("systems")
+    if not isinstance(systems, list) or not systems:
+        raise ReleaseError(f"{url} has no systems")
+    required = {"host", "url", "archiveFileName", "checksum", "size"}
+    for sysentry in systems:
+        missing = required - set(sysentry)
+        if missing:
+            raise ReleaseError(f"{url}: system entry lacks {sorted(missing)}")
     return systems
 
 
@@ -322,7 +319,10 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     ap.add_argument("--force", action="store_true",
                     help="replace an already published platform version")
     ap.add_argument("--skip-tools", action="store_true",
-                    help="do not build Go tools (index will lack their systems)")
+                    help="do not fetch tool systems from other repositories "
+                         "(index will lack those tools)")
+    ap.add_argument("--config", type=Path, default=CONFIG_FILE,
+                    help="release configuration (default: package/config.json)")
     ap.add_argument("--no-version-check", action="store_true",
                     help="do not require Version and package.json to match")
     return ap.parse_args(argv)
@@ -330,7 +330,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 def main(argv: list[str]) -> int:
     args = parse_args(argv)
-    cfg = load_config()
+    cfg = load_config(args.config)
     version = resolve_version(args, cfg)
     out: Path = args.out
     out.mkdir(parents=True, exist_ok=True)
@@ -342,11 +342,11 @@ def main(argv: list[str]) -> int:
     for tool in cfg["tools"]:
         if tool["source"] == "external":
             tools.append(tool_entry(tool, tool["systems"]))
-        elif tool["source"] == "go":
+        elif tool["source"] == "systems-json":
             if args.skip_tools:
-                log(f"skipping build of {tool['name']}")
+                log(f"skipping fetch of {tool['name']}")
                 continue
-            tools.append(tool_entry(tool, build_go_tool(cfg, tool, version, out)))
+            tools.append(tool_entry(tool, fetch_tool_systems(tool)))
         else:
             raise ReleaseError(f"unknown tool source {tool['source']!r} for {tool['name']}")
 

@@ -33,22 +33,10 @@ jobs:
         ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
         fetch-depth: 0
 
-    - name: setup go
-      uses: actions/setup-go@v5
-      with:
-        go-version-file: tools/burntool/go.mod
-        cache-dependency-path: tools/burntool/go.sum
-
     - name: setup python
       uses: actions/setup-python@v5
       with:
         python-version: '3.x'
-
-    - name: test burntool
-      working-directory: tools/burntool
-      run: |
-        go vet ./...
-        go test ./...
 
     - name: build release files
       env:
