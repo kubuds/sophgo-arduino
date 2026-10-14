@@ -56,7 +56,7 @@
       "name": "burntool",
       "version": "1.0.0",
       "source": "systems-json",
-      "url": "https://github.com/kubuds/sg200x-burn/releases/download/v{version}/burntool-{version}-systems.json"
+      "url": "https://github.com/kubuds/rproc-burn/releases/download/v{version}/burntool-{version}-systems.json"
     },
     {
       "packager": "sophgo",

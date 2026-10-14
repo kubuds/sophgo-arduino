@@ -11,7 +11,7 @@ Tools (the burntool uploader, the xpack gcc) are not built here. Their
 download URLs and checksums come either verbatim from config.json
 (source "external") or from a systems JSON published by another
 repository's release (source "systems-json", used for burntool from
-kubuds/sg200x-burn).
+kubuds/rproc-burn).
 
 Only the Python standard library and git are required.
 
