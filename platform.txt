@@ -104,40 +104,33 @@ recipe.size.pattern="{compiler.path}{compiler.size.cmd}" -B "{build.path}/{build
 recipe.size.regex=\s*[0-9]+\s+[0-9]+\s+[0-9]+\s+([0-9]+).*
 recipe.size.regex.data=\s*[0-9]+\s+[0-9]+\s+[0-9]+\s+([0-9]+).*
 
-## burntool_py
+## burntool (host-side uploader, see tools/burntool)
 
-tools.burntool_py.path={runtime.tools.burntool_py.path}
-tools.burntool_py.cmd=burntool.py
-tools.burntool_py.cmd.linux=burntool.py
-tools.burntool_py.cmd.windows=burntool.py
+tools.burntool.path={runtime.tools.burntool.path}
+tools.burntool.cmd=burntool
+tools.burntool.cmd.windows=burntool.exe
 
 ## upload
 
-tools.burntool_py.upload.protocol=serial
-tools.burntool_py.upload.params.verbose=
-tools.burntool_py.upload.params.quiet=
-tools.burntool_py.upload.pattern_args= -p "{serial.port}" -f {build.path}/{build.project_name}.elf
-tools.burntool_py.upload.pattern=python3 "{path}/{cmd}" {upload.pattern_args}
-tools.burntool_py.upload.pattern.windows=python "{path}/{cmd}" {upload.pattern_args}
+tools.burntool.upload.protocol=serial
+tools.burntool.upload.params.verbose=-v
+tools.burntool.upload.params.quiet=
+tools.burntool.upload.pattern="{path}/{cmd}" {upload.verbose} -p "{serial.port}" -f "{build.path}/{build.project_name}.elf"
 
 ## program
 
-tools.burntool_py.program.params.verbose=
-tools.burntool_py.program.params.quiet=
-tools.burntool_py.program.pattern_args=
-tools.burntool_py.program.pattern=
+tools.burntool.program.params.verbose=-v
+tools.burntool.program.params.quiet=
+tools.burntool.program.pattern="{path}/{cmd}" {program.verbose} -p "{serial.port}" -f "{build.path}/{build.project_name}.elf"
 
 ## erase
 
-tools.burntool_py.erase.protocol=serial
-tools.burntool_py.erase.params.verbose=
-tools.burntool_py.erase.params.quiet=
-tools.burntool_py.erase.pattern_args=
-tools.burntool_py.erase.pattern=
+tools.burntool.erase.params.verbose=
+tools.burntool.erase.params.quiet=
+tools.burntool.erase.pattern=
 
 ## bootloader
 
-tools.burntool_py.bootloader.protocol=serial
-tools.burntool_py.bootloader.params.verbose=
-tools.burntool_py.bootloader.params.quiet=
-tools.burntool_py.bootloader.pattern=
+tools.burntool.bootloader.params.verbose=
+tools.burntool.bootloader.params.quiet=
+tools.burntool.bootloader.pattern=

@@ -1,5 +1,6 @@
-#ifndef _VARIANT_SOC_H_
-#define _VARIANT_SOC_H
+/* Register map and interrupt numbers common to the SG200X family. */
+#ifndef _SOC_SG200X_COMMON_H_
+#define _SOC_SG200X_COMMON_H_
 /* irq */
 #define IRQ_LEVEL 0
 #define IRQ_EDGE 3

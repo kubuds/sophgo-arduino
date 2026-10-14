@@ -6,8 +6,8 @@ duo.name=Duo Dev Module
 duo.vid.0=0x3346
 duo.pid.0=0x1009
 
-duo.upload.tool=burntool_py
-duo.upload.tool.default=burntool_py
+duo.upload.tool=burntool
+duo.upload.tool.default=burntool
 
 duo.upload.flags=
 duo.upload.extra_flags=
@@ -40,8 +40,8 @@ duo256.name=Duo256 Dev Module
 duo256.vid.0=0x3346
 duo256.pid.0=0x1009
 
-duo256.upload.tool=burntool_py
-duo256.upload.tool.default=burntool_py
+duo256.upload.tool=burntool
+duo256.upload.tool.default=burntool
 
 duo256.upload.flags=
 duo256.upload.extra_flags=
@@ -74,8 +74,8 @@ duos.name=DuoS Dev Module
 duos.vid.0=0x3346
 duos.pid.0=0x1009
 
-duos.upload.tool=burntool_py
-duos.upload.tool.default=burntool_py
+duos.upload.tool=burntool
+duos.upload.tool.default=burntool
 
 duos.upload.flags=
 duos.upload.extra_flags=
@@ -101,3 +101,37 @@ duos.build.img_freq=48m
 duos.build.partitions=default
 duos.build.defines=
 duos.build.ldscript=link.ld
+
+##############################################################
+
+duomodule01.name=Duo Module 01 EVB (experimental)
+duomodule01.vid.0=0x3346
+duomodule01.pid.0=0x1009
+
+duomodule01.upload.tool=burntool
+duomodule01.upload.tool.default=burntool
+
+duomodule01.upload.flags=
+duomodule01.upload.extra_flags=
+duomodule01.upload.use_1200bps_touch=false
+duomodule01.upload.wait_for_upload_port=false
+
+duomodule01.serial.disableDTR=true
+duomodule01.serial.disableRTS=true
+
+duomodule01.build.tarch=riscv64
+duomodule01.build.target=unknown
+duomodule01.build.mcu=sg200x
+duomodule01.build.core=sg200x
+duomodule01.build.variant=duomodule01
+duomodule01.build.board=DUO_MODULE_01
+duomodule01.build.extra_flags=
+duomodule01.build.bootloader_addr=0x0
+duomodule01.build.start_addr=0x9fe00000
+duomodule01.build.image_size=0x200000
+
+duomodule01.build.f_cpu=25000000L
+duomodule01.build.img_freq=48m
+duomodule01.build.partitions=default
+duomodule01.build.defines=
+duomodule01.build.ldscript=link.ld

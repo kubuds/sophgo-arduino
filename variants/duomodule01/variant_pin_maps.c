@@ -1,0 +1,212 @@
+/*
+ * Copyright (C) Cvitek Co., Ltd. 2019-2020. All rights reserved.
+ */
+
+#include "variant.h"
+#include "csi_pin.h"
+
+dev_pin_map_t gpio_map[] = {
+    {SD0_CLK, SD0_CLK__XGPIOA_7, 0},
+    {SD0_CMD, SD0_CMD__XGPIOA_8, 0},
+    {SD0_D0, SD0_D0__XGPIOA_9, 0},
+    {SD0_D1, SD0_D1__XGPIOA_10, 0},
+    {SD0_D2, SD0_D2__XGPIOA_11, 0},
+    {SD0_D3, SD0_D3__XGPIOA_12, 0},
+    {SD0_CD, SD0_CD__XGPIOA_13, 0},
+    {SD0_PWR_EN, SD0_PWR_EN__XGPIOA_14, 0},
+    {SPK_EN, SPK_EN__XGPIOA_15, 0},
+    {UART0_TX, UART0_TX__XGPIOA_16, 0},
+    {UART0_RX, UART0_RX__XGPIOA_17, 0},
+    {JTAG_CPU_TCK, JTAG_CPU_TCK__XGPIOA_18, 0},
+    {JTAG_CPU_TMS, JTAG_CPU_TMS__XGPIOA_19, 0},
+    {EMMC_CLK, EMMC_CLK__XGPIOA_22, 0},
+    {EMMC_CMD, EMMC_CMD__XGPIOA_23, 0},
+    {EMMC_DAT1, EMMC_DAT1__XGPIOA_24, 0},
+    {EMMC_DAT0, EMMC_DAT0__XGPIOA_25, 0},
+    {EMMC_DAT2, EMMC_DAT2__XGPIOA_26, 0},
+    {EMMC_DAT3, EMMC_DAT3__XGPIOA_27, 0},
+    {IIC0_SCL, IIC0_SCL__XGPIOA_28, 0},
+    {IIC0_SDA, IIC0_SDA__XGPIOA_29, 0},
+    {AUX0, AUX0__XGPIOA_30, 0},
+    {ADC1, ADC1__XGPIOB_3, 1},
+    {USB_VBUS_DET, USB_VBUS_DET__XGPIOB_6, 1},
+    {IIC2_SCL, VIVO_D1__XGPIOB_20, 1},
+    {IIC2_SDA, VIVO_D0__XGPIOB_21, 1},
+    {GPIO_RTX, GPIO_RTX__XGPIOB_23, 1},
+    {PAD_ETH_TXM, PAD_ETH_TXM__XGPIOB_24, 1},
+    {PAD_ETH_TXP, PAD_ETH_TXP__XGPIOB_25, 1},
+    {PAD_ETH_RXM, PAD_ETH_RXM__XGPIOB_26, 1},
+    {PAD_ETH_RXP, PAD_ETH_RXP__XGPIOB_27, 1},
+    {PAD_MIPIRX4N, PAD_MIPIRX4N__XGPIOC_2, 2},
+    {PAD_MIPIRX4P, PAD_MIPIRX4P__XGPIOC_3, 2},
+    {PAD_MIPIRX3N, PAD_MIPIRX3N__XGPIOC_4, 2},
+    {PAD_MIPIRX3P, PAD_MIPIRX3P__XGPIOC_5, 2},
+    {PAD_MIPIRX2N, PAD_MIPIRX2N__XGPIOC_6, 2},
+    {PAD_MIPIRX2P, PAD_MIPIRX2P__XGPIOC_7, 2},
+    {PAD_MIPIRX1N, PAD_MIPIRX1N__XGPIOC_8, 2},
+    {PAD_MIPIRX1P, PAD_MIPIRX1P__XGPIOC_9, 2},
+    {PAD_MIPIRX0N, PAD_MIPIRX0N__XGPIOC_10, 2},
+    {PAD_MIPIRX0P, PAD_MIPIRX0P__XGPIOC_11, 2},
+    {PAD_MIPI_TXM1, PAD_MIPI_TXM1__XGPIOC_14, 2},
+    {PAD_MIPI_TXP1, PAD_MIPI_TXP1__XGPIOC_15, 2},
+    {PAD_MIPI_TXM2,PAD_MIPI_TXM2__XGPIOC_16,2},
+    {PAD_MIPI_TXM3,PAD_MIPI_TXM3__XGPIOC_20,2},
+    {PAD_MIPI_TXP3,PAD_MIPI_TXP3__XGPIOC_21,2},
+    {PAD_AUD_AINL_MIC, PAD_AUD_AINL_MIC__XGPIOC_23, 2},
+    {PAD_AUD_AOUTR, PAD_AUD_AOUTR__XGPIOC_24, 2},
+    {SD1_D2, SD1_D2__PWR_GPIO_19, 4},
+    {SD1_D1, SD1_D1__PWR_GPIO_20, 4},
+    {SD1_CLK, SD1_CLK__PWR_GPIO_23, 4},
+    {SD1_CMD, SD1_CMD__PWR_GPIO_22, 4},
+    {SD1_D0, SD1_D0__PWR_GPIO_21, 4},
+    {SD1_D3, SD1_D3__PWR_GPIO_18, 4},
+    {PWR_SEQ2, PWR_SEQ2__PWR_GPIO_4, 4},
+    {PWR_GPIO0, PWR_GPIO0__PWR_GPIO_0, 4},
+    {PWR_GPIO1, PWR_GPIO1__PWR_GPIO_1, 4},
+    {PWR_GPIO2, PWR_GPIO2__PWR_GPIO_2, 4},
+    {0xFFFFFFFF, 0xFF, 0}};
+
+dev_pin_map_t pwm_map[] = {
+    {VIVO_D10, VIVO_D10__PWM_1, 1},
+    {VIVO_D2,  VIVO_D2__PWM_2, 2},
+    {VIVO_D9,  VIVO_D9__PWM_2, 2},
+    {VIVO_D1, VIVO_D1__PWM_3, 3},
+    {VIVO_D8, VIVO_D8__PWM_3, 3},
+    {UART0_TX, UART0_TX__PWM_4, 4},
+    {UART0_RX, UART0_RX__PWM_5, 5},
+    {JTAG_CPU_TCK, JTAG_CPU_TCK__PWM_6, 6},
+    {JTAG_CPU_TMS, JTAG_CPU_TMS__PWM_7, 7},
+    {PWR_GPIO0, PWR_GPIO0__PWM_8, 8},
+    {PWR_GPIO1, PWR_GPIO1__PWM_9, 9},
+    {PWR_GPIO2, PWR_GPIO2__PWM_10, 10},
+    {ADC3, ADC3__PWM_12, 12},
+    {ADC2, ADC2__PWM_13, 13},
+    {0xFFFFFFFF, 0xFF, 0}};
+
+dev_pin_map_t adc_map[] = {
+    {ADC1, ADC1__XGPIOB_3, 0},
+    {ADC2, ADC2__XGPIOB_2, 1},
+    {ADC3, ADC3__XGPIOB_1, 2},
+    {0xFFFFFFFF, 0xFF, 0}};
+
+dev_pin_map_t uart_rx_map[] = {
+    {UART0_RX, UART0_RX__UART0_RX, 0},
+    {VIVO_D9, VIVO_D9__UART2_RX,2},
+    {VIVO_CLK, VIVO_CLK__UART2_RX, 2},
+    {VIVO_D5,  VIVO_D5__UART2_RX , 2},
+    {JTAG_CPU_TCK, JTAG_CPU_TCK__UART1_RX , 1},
+    {PWR_GPIO1,  PWR_GPIO1__UART2_RX, 2},
+    {ADC2, ADC2__UART3_RX,3},
+    {0xFFFFFFFF, 0xFF, 0}};
+
+dev_pin_map_t uart_tx_map[] = {
+    {UART0_TX, UART0_TX__UART0_TX, 0},
+    {UART0_TX, UART0_TX__UART1_TX , 1},
+    {VIVO_D10, VIVO_D10__UART2_TX, 2},
+    {VIVO_D2, VIVO_D2__UART2_TX, 2},
+    {JTAG_CPU_TMS, JTAG_CPU_TMS__UART1_TX , 1},
+    {VIVO_D6, VIVO_D6__UART2_TX, 2},
+    {IIC0_SCL, IIC0_SCL__UART1_TX, 1},
+    {IIC0_SCL, IIC0_SCL__UART2_TX, 2},
+    {PWR_GPIO0, PWR_GPIO0__UART2_TX, 2},
+    {ADC3, ADC3__UART3_TX, 3},
+    {0xFFFFFFFF, 0xFF, 0}};
+
+dev_pin_map_t iic_sda_map[] = {
+    {VIVO_D0, VIVO_D0__IIC4_SDA, 4},
+    {VIVO_D10, VIVO_D10__IIC1_SDA, 1},
+    {VIVO_D7, VIVO_D7__IIC2_SDA, 2},
+    {ADC2, ADC2__IIC4_SDA, 4},
+    {PWR_GPIO2, PWR_GPIO2__IIC2_SDA, 2},
+    {0xFFFFFFFF, 0xFF, 0}};
+
+dev_pin_map_t iic_scl_map[] = {
+    {VIVO_D1, VIVO_D1__IIC4_SCL, 4},
+    {VIVO_D9, VIVO_D9__IIC1_SCL, 1},
+    {VIVO_D3, VIVO_D3__IIC1_SCL, 1},
+    {VIVO_D8, VIVO_D8__IIC2_SCL, 2},
+    {ADC3, ADC3__IIC4_SCL, 4},
+    {PWR_GPIO1, PWR_GPIO1__IIC2_SCL, 2},
+    {0xFFFFFFFF, 0xFF, 0}};
+
+dev_pin_map_t spi_cs_map[] = {
+    {VIVO_D5, VIVO_D5__SPI3_CS_X, 3},
+    {0xFFFFFFFF, 0xFF, 0}};
+
+dev_pin_map_t spi_sck_map[] = {
+    {VIVO_D6, VIVO_D6__SPI3_SCK, 3},
+    {0xFF, 0xFFFFFFFF, 0}};
+
+dev_pin_map_t spi_miso_map[] = {
+    {VIVO_D7, VIVO_D7__SPI3_SDI, 3},
+    {0xFF, 0xFFFFFFFF, 0}};
+
+dev_pin_map_t spi_mosi_map[] = {
+    {VIVO_D8, VIVO_D8__SPI3_SDO, 3},
+    {0xFF, 0xFFFFFFFF, 0}};
+
+pin_name_t out_pin_map[] = {
+    IIC0_SDA,        /* 0  LED (XGPIOA_29) */
+    0xFF,            /* 1  3V3 */
+    0xFF,            /* 2  VSYS */
+    VIVO_D1,         /* 3  XGPIOB_20 */
+    0xFF,            /* 4  VSYS */
+    VIVO_D0,         /* 5  XGPIOB_21 */
+    0xFF,            /* 6  GND */
+    VIVO_D3,         /* 7  XGPIOB_18 */
+    UART0_TX,        /* 8  XGPIOA_16 */
+    0xFF,            /* 9  GND */
+    UART0_RX,        /* 10 XGPIOA_17 */
+    VIVO_D10,        /* 11 XGPIOB_11 */
+    VIVO_D2,         /* 12 XGPIOB_19 */
+    VIVO_D9,         /* 13 XGPIOB_12 */
+    0xFF,            /* 14 GND */
+    VIVO_CLK,        /* 15 XGPIOB_22 */
+    JTAG_CPU_TRST,   /* 16 XGPIOA_20 */
+    0xFF,            /* 17 3V3 */
+    JTAG_CPU_TMS,    /* 18 XGPIOA_19 */
+    VIVO_D8,         /* 19 XGPIOB_13 */
+    0xFF,            /* 20 GND */
+    VIVO_D7,         /* 21 XGPIOB_14 */
+    JTAG_CPU_TCK,    /* 22 XGPIOA_18 */
+    VIVO_D6,         /* 23 XGPIOB_15 */
+    VIVO_D5,         /* 24 XGPIOB_16 */
+    0xFF,            /* 25 GND */
+    IIC0_SCL,        /* 26 XGPIOA_28 */
+    ADC1,            /* 27 ADC header: ADC1 (XGPIOB_3) */
+    ADC2,            /* 28 ADC header: ADC2 (XGPIOB_2) */
+    ADC3             /* 29 ADC header: ADC3 (XGPIOB_1) */
+};
+
+pin_func_t out_pin_func_map[] = {
+    IIC0_SDA__XGPIOA_29,
+    0xFF,
+    0xFF,
+    VIVO_D1__XGPIOB_20,
+    0xFF,
+    VIVO_D0__XGPIOB_21,
+    0xFF,
+    VIVO_D3__XGPIOB_18,
+    UART0_TX__XGPIOA_16,
+    0xFF,
+    UART0_RX__XGPIOA_17,
+    VIVO_D10__XGPIOB_11,
+    VIVO_D2__XGPIOB_19,
+    VIVO_D9__XGPIOB_12,
+    0xFF,
+    VIVO_CLK__XGPIOB_22,
+    JTAG_CPU_TRST__XGPIOA_20,
+    0xFF,
+    JTAG_CPU_TMS__XGPIOA_19,
+    VIVO_D8__XGPIOB_13,
+    0xFF,
+    VIVO_D7__XGPIOB_14,
+    JTAG_CPU_TCK__XGPIOA_18,
+    VIVO_D6__XGPIOB_15,
+    VIVO_D5__XGPIOB_16,
+    0xFF,
+    IIC0_SCL__XGPIOA_28,
+    ADC1__XGPIOB_3,
+    ADC2__XGPIOB_2,
+    ADC3__XGPIOB_1
+};
